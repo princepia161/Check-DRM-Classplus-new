@@ -309,46 +309,46 @@ async def youtube_to_txt(client, message: Message):
         video_title = result.get('title', 'No title')
         url = result['url']
         videos.append(f"{video_title}: {url}")
-            if "classplusapp.com/drm/" in url:
-                # 1. Deepak API ka istemal karke Key nikalna
+                        if "classplusapp.com/drm/" in url:
+                # 1. Deepak API ka URL
                 my_api_link = f"https://deepak-drm-api.vercel.app/classplus?pssh={url}&license_url={url}"
-                prog = await m.reply_text("🔑 **Deepak API: Fetching DRM Key...**")
+                prog_msg = await m.reply_text("🔑 **Deepak API: Fetching Key...**")
                 
                 async with ClientSession() as session:
                     async with session.get(my_api_link) as resp:
                         if resp.status == 200:
-                            api_data = await resp.json()
-                            key = api_data.get("KEYS")
+                            api_res = await resp.json()
+                            key = api_res.get("KEYS")
                             
                             if key:
-                                await prog.edit(f"✅ **Key Found:** `{key}`\n📥 **Downloading & Decrypting...**")
+                                await prog_msg.edit(f"✅ **Key Found:** `{key}`\n📥 **Downloading...**")
                                 
-                                # 2. yt-dlp aur mp4decrypt ka combination command
-                                # Note: Hum 'bestvideo+bestaudio' download karke use key se unlock karenge
+                                # Command jo video download karke turant decrypt karegi
                                 cmd = (
                                     f'yt-dlp -k --allow-unplayable-formats '
                                     f'-f "bestvideo.{quality}+bestaudio" '
                                     f'--fixup never "{url}" -o "{name}.%(ext)s" '
-                                    f'--exec "mp4decrypt --key {key} {{}} {name}_ready.mp4 && rm {{}}"'
+                                    f'--exec "mp4decrypt --key {key} {{}} {name}_decrypted.mp4 && rm {{}}"'
                                 )
                                 
-                                # Download process start karna
+                                # Download start
                                 res_file = await helper.download_video(url, cmd, name)
-                                final_video = f"{name}_ready.mp4"
+                                final_video = f"{name}_decrypted.mp4"
                                 
-                                await prog.delete()
-                                await helper.send_vid(bot, m, cc, final_video, thumb, name, prog)
+                                await prog_msg.delete()
+                                await helper.send_vid(bot, m, cc, final_video, thumb, name, prog_msg)
                                 
-                                # Purani files delete karna
+                                # Cleaning
                                 if os.path.exists(final_video): os.remove(final_video)
                                 count += 1
                                 continue
                             else:
-                                await prog.edit("❌ **API ne Key nahi di! Check your Vercel Logs.**")
+                                await prog_msg.edit("❌ API ne key nahi di!")
                         else:
-                            await prog.edit(f"⚠️ **API Server Error:** {resp.status}")
+                            await prog_msg.edit(f"⚠️ API Status: {resp.status}")
                 count += 1
                 continue
+
 
     # Create and save the .txt file with the custom name
     txt_file = os.path.join("downloads", f'{custom_file_name}.txt')
